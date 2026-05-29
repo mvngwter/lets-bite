@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 · 무빙워터</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0D0D0D;--bg2:#111;--bg3:#161616;
+  --line:#1E1E1E;--line2:#141414;
+  --text:#F0EFE8;--muted:#B0AFA8;--dim:#555;--dimmer:#333;
+  --accent:#E8440A;--accent-light:#3A1208;
+  --side:#0A0A0A;--side-hover:#161616;
+  --green:#22C55E;--red:#EF4444;--blue:#3B82F6;
+  --sans:'Pretendard',-apple-system,sans-serif;
+  --r:8px;--t:0.15s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font-family:var(--sans);color:inherit}
+input,textarea,select{font-family:var(--sans)}
+
+/* ─── LOGIN ─── */
+#login-page{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:#080808;
+}
+.login-box{
+  background:var(--bg3);border:1px solid var(--line);border-radius:16px;
+  padding:36px;width:340px;
+}
+.login-box h1{font-size:20px;font-weight:800;margin-bottom:6px;letter-spacing:-0.03em}
+.login-box p{font-size:12px;color:var(--dim);margin-bottom:24px}
+.lform-group{margin-bottom:12px}
+.lform-group label{display:block;font-size:11px;font-weight:700;color:var(--dim);margin-bottom:5px;letter-spacing:0.05em}
+.lform-input{
+  width:100%;padding:9px 12px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  font-size:13px;color:var(--text);outline:none;transition:border-color var(--t);
+}
+.lform-input:focus{border-color:#333}
+.lbtn{
+  width:100%;padding:11px;margin-top:8px;
+  background:var(--text);color:var(--bg);
+  border-radius:var(--r);font-size:14px;font-weight:800;
+  transition:all var(--t);
+}
+.lbtn:hover{background:var(--accent);color:#fff}
+.lerr{font-size:12px;color:var(--accent);min-height:16px;margin-bottom:8px}
+
+/* ─── LAYOUT ─── */
+#layout{display:none;min-height:100vh}
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:200px;
+  background:var(--side);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;z-index:100;overflow-y:auto;
+}
+.sb-logo{
+  padding:18px 16px;font-size:14px;font-weight:800;letter-spacing:-0.03em;
+  border-bottom:1px solid var(--line);color:var(--text);
+  display:flex;align-items:center;gap:6px;
+}
+.sb-logo span{color:var(--accent)}
+.sb-section{padding:14px 10px 6px}
+.sb-lbl{font-size:10px;font-weight:700;letter-spacing:0.1em;color:var(--dimmer);padding:0 6px;margin-bottom:4px;text-transform:uppercase}
+.sb-btn{
+  display:flex;align-items:center;gap:8px;width:100%;
+  padding:8px 10px;border-radius:6px;
+  font-size:13px;font-weight:500;color:var(--dim);
+  transition:all var(--t);text-align:left;
+}
+.sb-btn:hover{background:var(--side-hover);color:var(--muted)}
+.sb-btn.active{background:var(--accent);color:#fff}
+.sb-btn .ic{font-size:14px;width:18px;text-align:center}
+.sb-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--line)}
+.sb-foot button{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--dimmer);padding:7px 10px;border-radius:6px;width:100%;
+  transition:all var(--t);
+}
+.sb-foot button:hover{background:var(--side-hover);color:var(--muted)}
+
+.admin-body{margin-left:200px;padding:28px;min-height:100vh}
+.page-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-top h1{font-size:20px;font-weight:800;letter-spacing:-0.03em}
+.page-top .user-label{font-size:12px;color:var(--dim)}
+
+/* ─── STAT CARDS ─── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.stat-card .sc-label{font-size:11px;color:var(--dim);font-weight:700;margin-bottom:6px;letter-spacing:0.04em}
+.stat-card .sc-num{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.sc-num.accent{color:var(--accent)}
+.sc-num.green{color:var(--green)}
+.sc-num.blue{color:var(--blue)}
+
+/* ─── CARD / TABLE ─── */
+.admin-card{background:var(--bg3);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.card-head{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 16px;border-bottom:1px solid var(--line);
+}
+.card-head h2{font-size:13px;font-weight:800;flex:1;letter-spacing:-0.01em}
+.card-search{
+  padding:6px 12px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:100px;font-size:12px;color:var(--text);outline:none;
+  transition:border-color var(--t);min-width:160px;
+}
+.card-search:focus{border-color:#333}
+.card-search::placeholder{color:var(--dimmer)}
+.card-select{
+  padding:6px 24px 6px 10px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:100px;font-size:12px;color:var(--text);outline:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23555'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 7px center;background-size:12px;
+}
+.card-select option{background:var(--bg2)}
+
+table{width:100%;border-collapse:collapse}
+thead{background:var(--bg2)}
+th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--dim);border-bottom:1px solid var(--line);white-space:nowrap;letter-spacing:0.04em}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:10px;font-weight:700}
+.badge-admin{background:#2D1B69;color:#A78BFA}
+.badge-active{background:#14532D;color:#4ADE80}
+.badge-inactive{background:#450A0A;color:#F87171}
+.badge-featured{background:var(--accent-light);color:var(--accent)}
+
+.act-btns{display:flex;gap:5px;flex-wrap:wrap}
+.abtn{
+  padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700;
+  border:1px solid;transition:all var(--t);
+}
+.abtn-del{border-color:#450A0A;color:#F87171}
+.abtn-del:hover{background:#450A0A}
+.abtn-tog{border-color:var(--line);color:var(--dim)}
+.abtn-tog:hover{border-color:#444;color:var(--muted)}
+.abtn-feat{border-color:var(--accent-light);color:var(--accent)}
+.abtn-feat:hover{background:var(--accent-light)}
+
+.tbl-empty{padding:36px;text-align:center;color:var(--dim);font-size:13px}
+.mini-pager{
+  display:flex;align-items:center;justify-content:center;gap:3px;
+  padding:12px;border-top:1px solid var(--line);
+}
+.mpg{
+  min-width:28px;height:28px;border-radius:5px;font-size:12px;
+  border:1px solid var(--line);color:var(--dim);
+  display:flex;align-items:center;justify-content:center;padding:0 6px;
+  transition:all var(--t);
+}
+.mpg:hover:not(:disabled){border-color:#444;color:var(--text)}
+.mpg.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mpg:disabled{opacity:.3;cursor:not-allowed}
+
+/* ─── SETTINGS FORM ─── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px}
+.sfield{}
+.sfield label{display:block;font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px;letter-spacing:0.04em}
+.sfield input,.sfield textarea{
+  width:100%;padding:9px 12px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  font-size:13px;color:var(--text);outline:none;
+  transition:border-color var(--t);resize:vertical;
+}
+.sfield input:focus,.sfield textarea:focus{border-color:#444}
+.sfield textarea{min-height:60px;line-height:1.6}
+.sfield .hint{font-size:10px;color:var(--dimmer);margin-top:4px}
+.save-btn{
+  display:block;margin:0 20px 20px;padding:10px 24px;
+  background:var(--accent);color:#fff;border-radius:var(--r);
+  font-size:13px;font-weight:800;transition:background var(--t);
+}
+.save-btn:hover{background:#C73A08}
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;bottom:18px;right:18px;z-index:9999;
+  background:var(--text);color:var(--bg);
+  padding:8px 18px;border-radius:100px;
+  font-size:12px;font-weight:800;
+  opacity:0;transition:opacity .25s;pointer-events:none;
+}
+#toast.show{opacity:1}
+
+/* ─── DASHBOARD GRID ─── */
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.bar-row{padding:14px 16px;border-bottom:1px solid var(--line2)}
+.bar-row:last-child{border-bottom:none}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.bar-label .cat{color:var(--muted)}
+.bar-label .cnt{color:var(--dim);font-variant-numeric:tabular-nums}
+.bar-track{height:4px;background:var(--line);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:100px;transition:width .6s ease}
+
+@media(max-width:960px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .settings-grid{grid-template-columns:1fr}
+  .dash-grid{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .sidebar{transform:translateX(-100%)}
+  .admin-body{margin-left:0;padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN ─── -->
+<div id="login-page">
+  <div class="login-box">
+    <h1>관리자 로그인</h1>
+    <p>무빙워터 Q&A 관리자 전용</p>
+    <div class="lerr" id="lerr"></div>
+    <div class="lform-group">
+      <label>이메일</label>
+      <input class="lform-input" id="adm-email" type="email" placeholder="관리자 이메일">
+    </div>
+    <div class="lform-group">
+      <label>비밀번호</label>
+      <input class="lform-input" id="adm-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="lbtn" onclick="doLogin()">로그인</button>
+  </div>
+</div>
+
+<!-- ─── ADMIN LAYOUT ─── -->
+<div id="layout">
+  <div class="sidebar">
+    <div class="sb-logo">무빙워터 <span>관리</span></div>
+    <div class="sb-section">
+      <div class="sb-lbl">메뉴</div>
+      <button class="sb-btn active" data-p="dashboard" onclick="go('dashboard')"><span class="ic">📊</span>대시보드</button>
+      <button class="sb-btn" data-p="posts"     onclick="go('posts')"    ><span class="ic">📝</span>게시글</button>
+      <button class="sb-btn" data-p="comments"  onclick="go('comments')" ><span class="ic">💬</span>댓글</button>
+      <button class="sb-btn" data-p="members"   onclick="go('members')"  ><span class="ic">👥</span>회원</button>
+      <button class="sb-btn" data-p="settings"  onclick="go('settings')" ><span class="ic">⚙️</span>사이트 설정</button>
+    </div>
+    <div class="sb-foot">
+      <button onclick="window.open('index.html','_blank')">🏠 사이트 보기</button>
+      <button onclick="doLogout()">🚪 로그아웃</button>
+    </div>
+  </div>
+
+  <div class="admin-body">
+    <div class="page-top">
+      <h1 id="page-title">대시보드</h1>
+      <span class="user-label" id="admin-nick"></span>
+    </div>
+    <div id="page"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SB_URL = 'https://cizgtbezpdtruqdbuicp.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpemd0YmV6cGR0cnVxZGJ1aWNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMDQwMDQsImV4cCI6MjA5NTU4MDAwNH0.l1avLXvXTLWdQzsWhIE0hr0z46b9PkHXEx70vHVORJo';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const PAGE_SIZE = 20;
+let _admin = null;
+let _states = { posts:{page:1,search:'',cat:''}, comments:{page:1,search:''}, members:{page:1,search:''} };
+
+/* ─── INIT ─── */
+(async()=>{
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) await checkAdmin(session.user);
+})();
+
+async function checkAdmin(user) {
+  const { data:p } = await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if (!p?.is_admin) {
+    document.getElementById('lerr').textContent='관리자 권한이 없습니다';
+    await sb.auth.signOut(); return;
+  }
+  _admin = p;
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('layout').style.display='flex';
+  document.getElementById('admin-nick').textContent=`👤 ${p.nickname}`;
+  go('dashboard');
+}
+
+async function doLogin() {
+  const email = document.getElementById('adm-email').value.trim();
+  const pw    = document.getElementById('adm-pw').value;
+  const err   = document.getElementById('lerr');
+  err.textContent='';
+  if(!email||!pw){err.textContent='이메일과 비밀번호를 입력해주세요';return;}
+  const { data, error } = await sb.auth.signInWithPassword({email,password:pw});
+  if(error){err.textContent='로그인 실패: '+error.message;return;}
+  await checkAdmin(data.user);
+}
+
+async function doLogout(){
+  await sb.auth.signOut(); location.reload();
+}
+
+/* ─── ROUTING ─── */
+const titles={dashboard:'대시보드',posts:'게시글 관리',comments:'댓글 관리',members:'회원 관리',settings:'사이트 설정'};
+function go(p){
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.toggle('active',b.dataset.p===p));
+  document.getElementById('page-title').textContent=titles[p]||p;
+  const renders={dashboard:renderDash,posts:renderPosts,comments:renderComments,members:renderMembers,settings:renderSettings};
+  renders[p]?.();
+}
+
+/* ─── DASHBOARD ─── */
+async function renderDash(){
+  const el=document.getElementById('page');
+  el.innerHTML=`<div style="color:var(--dim);padding:40px;text-align:center">불러오는 중...</div>`;
+
+  const [
+    {count:postCnt},{count:cmtCnt},{count:memberCnt},{count:visitCnt}
+  ] = await Promise.all([
+    sb.from('posts').select('*',{count:'exact',head:true}),
+    sb.from('comments').select('*',{count:'exact',head:true}),
+    sb.from('profiles').select('*',{count:'exact',head:true}),
+    sb.from('visits').select('*',{count:'exact',head:true}),
+  ]);
+
+  const {data:recent} = await sb.from('posts')
+    .select('id,title,category,view_count,like_count,profiles!posts_user_id_fkey(nickname),created_at')
+    .order('created_at',{ascending:false}).limit(8);
+
+  const cats=['커리어','연애/결혼','재테크','기타'];
+  const catCounts = await Promise.all(cats.map(c=>sb.from('posts').select('*',{count:'exact',head:true}).eq('category',c)));
+  const maxCat = Math.max(...catCounts.map(r=>r.count||0), 1);
+
+  el.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="sc-label">📝 게시글</div><div class="sc-num accent">${(postCnt||0).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="sc-label">💬 댓글</div><div class="sc-num">${(cmtCnt||0).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="sc-label">👥 회원</div><div class="sc-num blue">${(memberCnt||0).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="sc-label">👁 방문</div><div class="sc-num green">${(visitCnt||0).toLocaleString()}</div></div>
+    </div>
+    <div class="dash-grid">
+      <div class="admin-card">
+        <div class="card-head"><h2>최근 게시글</h2></div>
+        <table>
+          <thead><tr><th>제목</th><th>카테고리</th><th>작성자</th><th>조회</th><th>공감</th></tr></thead>
+          <tbody>
+            ${recent?.map(p=>`<tr>
+              <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</td>
+              <td>${p.category}</td>
+              <td>${esc(p.profiles?.nickname||'탈퇴')}</td>
+              <td>${p.view_count}</td>
+              <td>${p.like_count}</td>
+            </tr>`).join('')||'<tr><td colspan="5" class="tbl-empty">없음</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div class="admin-card">
+        <div class="card-head"><h2>카테고리 현황</h2></div>
+        ${cats.map((c,i)=>`
+          <div class="bar-row">
+            <div class="bar-label"><span class="cat">${c}</span><span class="cnt">${catCounts[i].count||0}개</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round((catCounts[i].count||0)/maxCat*100)}%"></div></div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ─── POSTS ─── */
+async function renderPosts(){
+  const el=document.getElementById('page');
+  el.innerHTML=`
+    <div class="admin-card">
+      <div class="card-head">
+        <h2>게시글 목록</h2>
+        <input class="card-search" id="p-srch" placeholder="제목 검색..." oninput="debounce(()=>{_states.posts.page=1;loadPostsTbl()})">
+        <select class="card-select" id="p-cat" onchange="_states.posts.page=1;loadPostsTbl()">
+          <option value="">전체</option>
+          <option value="커리어">커리어</option>
+          <option value="연애/결혼">연애/결혼</option>
+          <option value="재테크">재테크</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div id="posts-tbl"><div class="tbl-empty">불러오는 중...</div></div>
+    </div>`;
+  loadPostsTbl();
+}
+
+async function loadPostsTbl(){
+  const srch=document.getElementById('p-srch')?.value.trim()||'';
+  const cat=document.getElementById('p-cat')?.value||'';
+  const {page}=_states.posts;
+  const from=(page-1)*PAGE_SIZE, to=from+PAGE_SIZE-1;
+
+  let q=sb.from('posts')
+    .select('id,title,category,view_count,like_count,comment_count,is_featured,created_at,profiles!posts_user_id_fkey(nickname)',{count:'exact'})
+    .range(from,to).order('created_at',{ascending:false});
+  if(srch) q=q.ilike('title',`%${srch}%`);
+  if(cat)  q=q.eq('category',cat);
+
+  const {data,count}=await q;
+  const total=Math.ceil((count||0)/PAGE_SIZE);
+
+  const html=`
+    <table>
+      <thead><tr><th>제목</th><th>카테고리</th><th>작성자</th><th>조회</th><th>공감</th><th>댓글</th><th>날짜</th><th>관리</th></tr></thead>
+      <tbody>
+        ${data?.length?data.map(p=>`<tr>
+          <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${p.is_featured?'<span class="badge badge-featured">🎬</span> ':''}${esc(p.title)}
+          </td>
+          <td>${p.category}</td>
+          <td>${esc(p.profiles?.nickname||'탈퇴')}</td>
+          <td>${p.view_count}</td>
+          <td>${p.like_count}</td>
+          <td>${p.comment_count}</td>
+          <td style="white-space:nowrap">${new Date(p.created_at).toLocaleDateString('ko-KR')}</td>
+          <td>
+            <div class="act-btns">
+              <button class="abtn abtn-feat" onclick="toggleFeatured(${p.id},${p.is_featured})">${p.is_featured?'🎬 해제':'🎬 지정'}</button>
+              <button class="abtn abtn-del" onclick="deletePost(${p.id})">삭제</button>
+            </div>
+          </td>
+        </tr>`).join(''):`<tr><td colspan="8" class="tbl-empty">게시글 없음</td></tr>`}
+      </tbody>
+    </table>
+    ${miniPager(page,total,'posts')}`;
+  const wrap=document.getElementById('posts-tbl');
+  if(wrap) wrap.innerHTML=html;
+}
+
+async function toggleFeatured(id,cur){
+  const {error}=await sb.from('posts').update({is_featured:!cur}).eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  toast(!cur?'🎬 영상예정 지정됨':'지정 해제됨');
+  loadPostsTbl();
+}
+
+async function deletePost(id){
+  if(!confirm('이 게시글을 삭제할까요? (댓글·공감 포함)')) return;
+  const {error}=await sb.from('posts').delete().eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  toast('게시글 삭제됨');
+  loadPostsTbl();
+}
+
+/* ─── COMMENTS ─── */
+async function renderComments(){
+  const el=document.getElementById('page');
+  el.innerHTML=`
+    <div class="admin-card">
+      <div class="card-head">
+        <h2>댓글 목록</h2>
+        <input class="card-search" id="c-srch" placeholder="내용 검색..." oninput="debounce(()=>{_states.comments.page=1;loadCmtsTbl()})">
+      </div>
+      <div id="cmts-tbl"><div class="tbl-empty">불러오는 중...</div></div>
+    </div>`;
+  loadCmtsTbl();
+}
+
+async function loadCmtsTbl(){
+  const srch=document.getElementById('c-srch')?.value.trim()||'';
+  const {page}=_states.comments;
+  const from=(page-1)*PAGE_SIZE, to=from+PAGE_SIZE-1;
+
+  let q=sb.from('comments')
+    .select('id,content,created_at,post_id,posts!comments_post_id_fkey(title),profiles!comments_user_id_fkey(nickname)',{count:'exact'})
+    .range(from,to).order('created_at',{ascending:false});
+  if(srch) q=q.ilike('content',`%${srch}%`);
+
+  const {data,count}=await q;
+  const total=Math.ceil((count||0)/PAGE_SIZE);
+
+  const html=`
+    <table>
+      <thead><tr><th>내용</th><th>작성자</th><th>게시글</th><th>날짜</th><th>관리</th></tr></thead>
+      <tbody>
+        ${data?.length?data.map(c=>`<tr>
+          <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.content)}</td>
+          <td>${esc(c.profiles?.nickname||'탈퇴')}</td>
+          <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim)">${esc(c.posts?.title||'-')}</td>
+          <td style="white-space:nowrap">${new Date(c.created_at).toLocaleDateString('ko-KR')}</td>
+          <td><button class="abtn abtn-del" onclick="deleteCmt(${c.id},${c.post_id})">삭제</button></td>
+        </tr>`).join(''):`<tr><td colspan="5" class="tbl-empty">댓글 없음</td></tr>`}
+      </tbody>
+    </table>
+    ${miniPager(page,total,'comments')}`;
+  const wrap=document.getElementById('cmts-tbl');
+  if(wrap) wrap.innerHTML=html;
+}
+
+async function deleteCmt(id, postId){
+  if(!confirm('이 댓글을 삭제할까요?')) return;
+  const {error}=await sb.from('comments').delete().eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  // 댓글 수 재계산
+  const {count}=await sb.from('comments').select('*',{count:'exact',head:true}).eq('post_id',postId);
+  await sb.from('posts').update({comment_count:count||0}).eq('id',postId);
+  toast('댓글 삭제됨');
+  loadCmtsTbl();
+}
+
+/* ─── MEMBERS ─── */
+async function renderMembers(){
+  const el=document.getElementById('page');
+  el.innerHTML=`
+    <div class="admin-card">
+      <div class="card-head">
+        <h2>회원 목록</h2>
+        <input class="card-search" id="m-srch" placeholder="닉네임/이메일 검색..." oninput="debounce(()=>{_states.members.page=1;loadMembersTbl()})">
+      </div>
+      <div id="members-tbl"><div class="tbl-empty">불러오는 중...</div></div>
+    </div>`;
+  loadMembersTbl();
+}
+
+async function loadMembersTbl(){
+  const srch=document.getElementById('m-srch')?.value.trim()||'';
+  const {page}=_states.members;
+  const from=(page-1)*PAGE_SIZE, to=from+PAGE_SIZE-1;
+
+  let q=sb.from('profiles')
+    .select('*',{count:'exact'})
+    .range(from,to).order('created_at',{ascending:false});
+  if(srch) q=q.or(`nickname.ilike.%${srch}%,email.ilike.%${srch}%`);
+
+  const {data,count}=await q;
+  const total=Math.ceil((count||0)/PAGE_SIZE);
+
+  const html=`
+    <table>
+      <thead><tr><th>닉네임</th><th>이름</th><th>이메일</th><th>상태</th><th>권한</th><th>가입일</th><th>관리</th></tr></thead>
+      <tbody>
+        ${data?.length?data.map(m=>`<tr>
+          <td><strong>${esc(m.nickname)}</strong></td>
+          <td>${esc(m.name)}</td>
+          <td style="color:var(--dim);font-size:11px">${esc(m.email)}</td>
+          <td><span class="badge ${m.is_active?'badge-active':'badge-inactive'}">${m.is_active?'활성':'비활성'}</span></td>
+          <td><span class="badge ${m.is_admin?'badge-admin':''}">${m.is_admin?'관리자':'회원'}</span></td>
+          <td style="white-space:nowrap">${new Date(m.created_at).toLocaleDateString('ko-KR')}</td>
+          <td>
+            <div class="act-btns">
+              <button class="abtn abtn-tog" onclick="toggleAdmin('${m.id}',${m.is_admin})">${m.is_admin?'권한해제':'관리자지정'}</button>
+              <button class="abtn abtn-tog" onclick="toggleActive('${m.id}',${m.is_active})">${m.is_active?'비활성화':'활성화'}</button>
+              ${m.id!==_admin?.id?`<button class="abtn abtn-del" onclick="deleteMember('${m.id}')">삭제</button>`:''}
+            </div>
+          </td>
+        </tr>`).join(''):`<tr><td colspan="7" class="tbl-empty">회원 없음</td></tr>`}
+      </tbody>
+    </table>
+    ${miniPager(page,total,'members')}`;
+  const wrap=document.getElementById('members-tbl');
+  if(wrap) wrap.innerHTML=html;
+}
+
+async function toggleAdmin(id,cur){
+  if(cur&&!confirm('관리자 권한을 해제할까요?')) return;
+  const {error}=await sb.from('profiles').update({is_admin:!cur}).eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  toast(!cur?'관리자로 지정됨':'권한 해제됨');
+  loadMembersTbl();
+}
+
+async function toggleActive(id,cur){
+  const {error}=await sb.from('profiles').update({is_active:!cur}).eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  toast(!cur?'계정 활성화됨':'계정 비활성화됨');
+  loadMembersTbl();
+}
+
+async function deleteMember(id){
+  if(!confirm('이 회원을 삭제할까요?\n(작성한 글은 작성자 없음으로 남습니다)')) return;
+  const {error}=await sb.from('profiles').delete().eq('id',id);
+  if(error){toast('오류: '+error.message);return;}
+  toast('회원 삭제됨');
+  loadMembersTbl();
+}
+
+/* ─── SETTINGS ─── */
+async function renderSettings(){
+  const el=document.getElementById('page');
+  el.innerHTML=`<div style="color:var(--dim);padding:40px;text-align:center">불러오는 중...</div>`;
+
+  const {data,error}=await sb.from('site_settings').select('*').order('key');
+  if(error){el.innerHTML=`<div class="tbl-empty">오류: ${error.message}</div>`;return;}
+
+  const s=Object.fromEntries((data||[]).map(r=>[r.key,{value:r.value,label:r.label}]));
+
+  el.innerHTML=`
+    <div class="admin-card">
+      <div class="card-head"><h2>⚙️ 메인 페이지 텍스트</h2></div>
+      <div class="settings-grid">
+        <div class="sfield">
+          <label>${s.hero_title?.label||'히어로 제목'}</label>
+          <input id="sf-hero_title" value="${esc(s.hero_title?.value||'')}">
+          <div class="hint">줄바꿈이 필요하면 \\n 을 입력하세요</div>
+        </div>
+        <div class="sfield">
+          <label>${s.hero_subtitle?.label||'히어로 부제'}</label>
+          <input id="sf-hero_subtitle" value="${esc(s.hero_subtitle?.value||'')}">
+        </div>
+        <div class="sfield" style="grid-column:1/-1">
+          <label>${s.hero_desc?.label||'히어로 설명'}</label>
+          <textarea id="sf-hero_desc">${esc(s.hero_desc?.value||'')}</textarea>
+          <div class="hint">줄바꿈이 필요하면 Enter 키를 사용하세요</div>
+        </div>
+        <div class="sfield" style="grid-column:1/-1">
+          <label>${s.site_notice?.label||'상단 공지'}</label>
+          <input id="sf-site_notice" value="${esc(s.site_notice?.value||'')}" placeholder="비워두면 공지바가 숨겨집니다">
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveSettings()">💾 저장하기</button>
+    </div>`;
+}
+
+async function saveSettings(){
+  const keys=['hero_title','hero_subtitle','hero_desc','site_notice'];
+  const updates=[];
+  let allOk=true;
+
+  for(const key of keys){
+    const el=document.getElementById('sf-'+key);
+    if(!el) continue;
+    const value=el.value; // textarea는 .value, input도 .value
+    const {error}=await sb.from('site_settings')
+      .update({value, updated_at:new Date().toISOString()})
+      .eq('key',key);
+    if(error){ toast('저장 오류: '+error.message); allOk=false; break; }
+  }
+  if(allOk) toast('✅ 설정이 저장되었습니다');
+}
+
+/* ─── PAGINATION ─── */
+function miniPager(page,total,ns){
+  if(total<=1) return '';
+  let html=`<div class="mini-pager">
+    <button class="mpg" onclick="_states.${ns}.page=${page-1};load${cap(ns)}Tbl()" ${page<=1?'disabled':''}>‹</button>`;
+  const start=Math.max(1,page-2), end=Math.min(total,page+2);
+  if(start>1) html+=`<button class="mpg" onclick="_states.${ns}.page=1;load${cap(ns)}Tbl()">1</button>${start>2?'<span style="color:var(--dim);padding:0 4px">…</span>':''}`;
+  for(let i=start;i<=end;i++) html+=`<button class="mpg ${i===page?'active':''}" onclick="_states.${ns}.page=${i};load${cap(ns)}Tbl()">${i}</button>`;
+  if(end<total) html+=`${end<total-1?'<span style="color:var(--dim);padding:0 4px">…</span>':''}<button class="mpg" onclick="_states.${ns}.page=${total};load${cap(ns)}Tbl()">${total}</button>`;
+  html+=`<button class="mpg" onclick="_states.${ns}.page=${page+1};load${cap(ns)}Tbl()" ${page>=total?'disabled':''}>›</button></div>`;
+  return html;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+
+/* ─── UTILS ─── */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function esc(s){
+  if(s==null)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+let _dbt;
+function debounce(fn,ms=350){clearTimeout(_dbt);_dbt=setTimeout(fn,ms);}
+</script>
+</body>
+</html>
